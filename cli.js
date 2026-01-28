@@ -31,7 +31,7 @@ function printVersion() {
 
 function importTsv(filePath) {
   if (!fs.existsSync(filePath)) {
-    throw new Error(chalk.redBright(`Файл не найден: ${filePath}`));
+    throw new Error(`Файл не найден: ${filePath}`);
   }
   const data = fs.readFileSync(filePath, 'utf-8');
   const lines = data.split('\n').filter(Boolean);
@@ -50,23 +50,26 @@ function importTsv(filePath) {
 
 const [,, command, arg] = process.argv;
 
-switch (command) {
-  case '--help':
-  case undefined:
-    printHelp();
-    break;
-  case '--version':
-    printVersion();
-    break;
-  case '--import':
-    if (!arg) {
-      console.error(chalk.redBright('Укажите путь к TSV-файлу.'));
-      throw new Error(chalk.redBright('Укажите путь к TSV-файлу.'));
-    }
-    importTsv(arg);
-    break;
-  default:
-    console.log(chalk.red('Неизвестная команда.'));
-    printHelp();
-    throw new Error(chalk.red('Неизвестная команда.'));
+try {
+  switch (command) {
+    case '--help':
+    case undefined:
+      printHelp();
+      break;
+    case '--version':
+      printVersion();
+      break;
+    case '--import':
+      if (!arg) {
+        throw new Error('Укажите путь к TSV-файлу.');
+      }
+      importTsv(arg);
+      break;
+    default:
+      printHelp();
+      throw new Error('Неизвестная команда.');
+  }
+} catch (err) {
+  console.error(chalk.bgRedBright(err.message));
+  process.exitCode = 1;
 }
