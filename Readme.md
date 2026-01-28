@@ -1,7 +1,7 @@
 # Личный проект «Шесть городов»
 
 * Студент: [Денис Прокопьев](https://up.htmlacademy.ru/nodejs-api-individual/2/user/135780).
-* Наставник: `Дмитрий Вовк`.
+* Наставник: [Дмитрий Вовк] (https://htmlacademy.ru/profile/id2632017).
 
 ---
 
