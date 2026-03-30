@@ -14,7 +14,7 @@ export abstract class BaseController implements ControllerInterface {
   }
 
   protected addRoute(route: RouteInterface): void {
-    const middlewares: RequestHandler[] = route.middlewares ?? [];
+    const middlewares: RequestHandler[] = (route.middlewares ?? []).map((middleware) => middleware.execute.bind(middleware));
     const wrappedHandler = asyncHandler(route.handler);
 
     this.router[route.method](route.path, ...middlewares, wrappedHandler);

@@ -7,6 +7,7 @@ import { UserService } from '../modules/user.service.js';
 import { TokenRdo } from '../rdo/token.rdo.js';
 import { UserRdo } from '../rdo/user.rdo.js';
 import { BaseController, HttpError, HttpMethod } from '../libs/rest/index.js';
+import { ValidateDtoMiddleware } from '../middlewares/validate-dto.middleware.js';
 
 export class UserController extends BaseController {
   constructor(
@@ -18,12 +19,18 @@ export class UserController extends BaseController {
     this.addRoute({
       path: '/register',
       method: HttpMethod.Post,
-      handler: this.register
+      handler: this.register,
+      middlewares: [
+        new ValidateDtoMiddleware(CreateUserDto)
+      ]
     });
     this.addRoute({
       path: '/login',
       method: HttpMethod.Post,
-      handler: this.login
+      handler: this.login,
+      middlewares: [
+        new ValidateDtoMiddleware(LoginUserDto)
+      ]
     });
     this.addRoute({
       path: '/login',

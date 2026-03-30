@@ -26,13 +26,19 @@ export class OfferService implements IOfferService {
   async create(offerData: CreateOfferDto): Promise<OfferEntity> {
     return OfferModel.create({
       ...offerData,
+      publicationDate: new Date(offerData.publicationDate),
       commentsCount: 0,
       rating: 0
     });
   }
 
   async update(offerId: string, updateData: UpdateOfferDto): Promise<OfferEntity | null> {
-    return OfferModel.findByIdAndUpdate(offerId, updateData, { new: true }).exec();
+    const updatePayload = {
+      ...updateData,
+      publicationDate: updateData.publicationDate ? new Date(updateData.publicationDate) : undefined
+    };
+
+    return OfferModel.findByIdAndUpdate(offerId, updatePayload, { new: true }).exec();
   }
 
   async delete(offerId: string): Promise<void> {

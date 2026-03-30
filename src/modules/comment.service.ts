@@ -19,8 +19,10 @@ export class CommentService implements ICommentService {
   }
 
   async create(offerId: string, userId: string, commentData: CreateCommentDto): Promise<CommentEntity> {
+    const { text, rating } = commentData;
     const comment = await CommentModel.create({
-      ...commentData,
+      text,
+      rating,
       offer: new Types.ObjectId(offerId),
       user: new Types.ObjectId(userId),
       publicationDate: new Date()

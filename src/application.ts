@@ -2,10 +2,12 @@ import express, { Express } from 'express';
 import { injectable } from 'inversify';
 import config from './config.js';
 import logger from './logger.js';
+import { CommentController } from './controllers/comment.controller.js';
 import { OfferController } from './controllers/offer.controller.js';
 import { UserController } from './controllers/user.controller.js';
 import { ControllerInterface, BaseExceptionFilter } from './libs/rest/index.js';
 import { AuthService } from './modules/auth.service.js';
+import { CommentService } from './modules/comment.service.js';
 import { OfferService } from './modules/offer.service.js';
 import { UserService } from './modules/user.service.js';
 
@@ -18,7 +20,7 @@ export enum AppRoute {
 export class Application {
   private readonly app: Express;
   private readonly exceptionFilter: BaseExceptionFilter;
-  private readonly controllers: Record<AppRoute, ControllerInterface>;
+  private readonly controllers: Array<{ path: string; controller: ControllerInterface }>;
 
   constructor() {
     this.app = express();
@@ -27,11 +29,13 @@ export class Application {
     const userService = new UserService();
     const authService = new AuthService(userService);
     const offerService = new OfferService();
+    const commentService = new CommentService(offerService);
 
-    this.controllers = {
-      [AppRoute.Users]: new UserController(userService, authService),
-      [AppRoute.Offers]: new OfferController(offerService, authService)
-    };
+    this.controllers = [
+      { path: AppRoute.Users, controller: new UserController(userService, authService) },
+      { path: AppRoute.Offers, controller: new OfferController(offerService) },
+      { path: AppRoute.Offers, controller: new CommentController(commentService) }
+    ];
   }
 
   public init(): void {
@@ -50,8 +54,9 @@ export class Application {
   }
 
   private registerRoutes(): void {
-    this.app.use(AppRoute.Users, this.controllers[AppRoute.Users].router);
-    this.app.use(AppRoute.Offers, this.controllers[AppRoute.Offers].router);
+    this.controllers.forEach(({ path, controller }) => {
+      this.app.use(path, controller.router);
+    });
   }
 
   private registerExceptionFilters(): void {
