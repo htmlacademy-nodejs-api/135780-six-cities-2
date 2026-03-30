@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import { StatusCodes } from 'http-status-codes';
 import { CreateOfferDto } from '../dto/create-offer.dto.js';
 import { FavoriteDto } from '../dto/favorite.dto.js';
 import { GetFavoritesQueryDto } from '../dto/get-favorites.query.dto.js';
 import { GetOffersQueryDto } from '../dto/get-offers.query.dto.js';
 import { UpdateOfferDto } from '../dto/update-offer.dto.js';
-import { BaseController, HttpError, HttpMethod } from '../libs/rest/index.js';
+import { BaseController, HttpMethod } from '../libs/rest/index.js';
+import { ValidateDocumentExistsMiddleware } from '../middlewares/validate-document-exists.middleware.js';
 import { ValidateDtoMiddleware } from '../middlewares/validate-dto.middleware.js';
 import { ValidateObjectIdMiddleware } from '../middlewares/validate-object-id.middleware.js';
 import { OfferService } from '../modules/offer.service.js';
@@ -36,7 +36,8 @@ export class OfferController extends BaseController {
       method: HttpMethod.Get,
       handler: this.show,
       middlewares: [
-        new ValidateObjectIdMiddleware('offerId')
+        new ValidateObjectIdMiddleware('offerId'),
+        new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
       ]
     });
     this.addRoute({
@@ -45,7 +46,8 @@ export class OfferController extends BaseController {
       handler: this.update,
       middlewares: [
         new ValidateObjectIdMiddleware('offerId'),
-        new ValidateDtoMiddleware(UpdateOfferDto)
+        new ValidateDtoMiddleware(UpdateOfferDto),
+        new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
       ]
     });
     this.addRoute({
@@ -53,7 +55,8 @@ export class OfferController extends BaseController {
       method: HttpMethod.Delete,
       handler: this.delete,
       middlewares: [
-        new ValidateObjectIdMiddleware('offerId')
+        new ValidateObjectIdMiddleware('offerId'),
+        new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
       ]
     });
     this.addRoute({
@@ -75,7 +78,8 @@ export class OfferController extends BaseController {
       handler: this.addFavorite,
       middlewares: [
         new ValidateObjectIdMiddleware('offerId'),
-        new ValidateDtoMiddleware(FavoriteDto)
+        new ValidateDtoMiddleware(FavoriteDto),
+        new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
       ]
     });
     this.addRoute({
@@ -84,7 +88,8 @@ export class OfferController extends BaseController {
       handler: this.removeFavorite,
       middlewares: [
         new ValidateObjectIdMiddleware('offerId'),
-        new ValidateDtoMiddleware(FavoriteDto)
+        new ValidateDtoMiddleware(FavoriteDto),
+        new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
       ]
     });
   }
@@ -104,10 +109,6 @@ export class OfferController extends BaseController {
   private show = async (req: Request, res: Response) => {
     const offerId = this.getParam(req, 'offerId');
     const offer = await this.offerService.findById(offerId);
-    if (!offer) {
-      throw new HttpError(StatusCodes.NOT_FOUND, 'Offer not found');
-    }
-
     this.ok(res, OfferRdo, offer);
   };
 
@@ -115,10 +116,6 @@ export class OfferController extends BaseController {
     const offerId = this.getParam(req, 'offerId');
     const body = req.body as UpdateOfferDto;
     const offer = await this.offerService.update(offerId, body);
-    if (!offer) {
-      throw new HttpError(StatusCodes.NOT_FOUND, 'Offer not found');
-    }
-
     this.ok(res, OfferRdo, offer);
   };
 
@@ -144,11 +141,6 @@ export class OfferController extends BaseController {
     const offerId = this.getParam(req, 'offerId');
     const body = req.body as FavoriteDto;
     const offer = await this.offerService.setFavoriteStatus(offerId, body.userId, true);
-
-    if (!offer) {
-      throw new HttpError(StatusCodes.NOT_FOUND, 'Offer not found');
-    }
-
     this.ok(res, OfferRdo, offer);
   };
 
@@ -156,11 +148,6 @@ export class OfferController extends BaseController {
     const offerId = this.getParam(req, 'offerId');
     const body = req.body as FavoriteDto;
     const offer = await this.offerService.setFavoriteStatus(offerId, body.userId, false);
-
-    if (!offer) {
-      throw new HttpError(StatusCodes.NOT_FOUND, 'Offer not found');
-    }
-
     this.ok(res, OfferRdo, offer);
   };
 }

@@ -25,4 +25,8 @@ export class UserService implements IUserService {
       password
     });
   }
+
+  async updateAvatar(id: string, avatarPath: string): Promise<UserEntity | null> {
+    return UserModel.findByIdAndUpdate(id, { avatar: avatarPath }, { new: true }).exec();
+  }
 }

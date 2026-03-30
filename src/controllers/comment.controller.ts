@@ -1,13 +1,18 @@
 import { Request, Response } from 'express';
 import { CreateCommentDto } from '../dto/create-comment.dto.js';
 import { BaseController, HttpMethod } from '../libs/rest/index.js';
+import { ValidateDocumentExistsMiddleware } from '../middlewares/validate-document-exists.middleware.js';
 import { ValidateDtoMiddleware } from '../middlewares/validate-dto.middleware.js';
 import { ValidateObjectIdMiddleware } from '../middlewares/validate-object-id.middleware.js';
+import { OfferService } from '../modules/offer.service.js';
 import { CommentService } from '../modules/comment.service.js';
 import { CommentRdo } from '../rdo/comment.rdo.js';
 
 export class CommentController extends BaseController {
-  constructor(private readonly commentService: CommentService) {
+  constructor(
+    private readonly commentService: CommentService,
+    private readonly offerService: OfferService
+  ) {
     super();
 
     this.addRoute({
@@ -15,7 +20,8 @@ export class CommentController extends BaseController {
       method: HttpMethod.Get,
       handler: this.index,
       middlewares: [
-        new ValidateObjectIdMiddleware('offerId')
+        new ValidateObjectIdMiddleware('offerId'),
+        new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
       ]
     });
 
@@ -25,7 +31,8 @@ export class CommentController extends BaseController {
       handler: this.create,
       middlewares: [
         new ValidateObjectIdMiddleware('offerId'),
-        new ValidateDtoMiddleware(CreateCommentDto)
+        new ValidateDtoMiddleware(CreateCommentDto),
+        new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
       ]
     });
   }

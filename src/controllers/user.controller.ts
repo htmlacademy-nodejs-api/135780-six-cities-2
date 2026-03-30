@@ -2,24 +2,28 @@ import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { CreateUserDto } from '../dto/create-user.dto.js';
 import { LoginUserDto } from '../dto/login-user.dto.js';
+import { BaseController, HttpError, HttpMethod } from '../libs/rest/index.js';
+import { UploadFileMiddleware } from '../middlewares/upload-file.middleware.js';
+import { ValidateDocumentExistsMiddleware } from '../middlewares/validate-document-exists.middleware.js';
+import { ValidateDtoMiddleware } from '../middlewares/validate-dto.middleware.js';
+import { ValidateObjectIdMiddleware } from '../middlewares/validate-object-id.middleware.js';
 import { AuthService } from '../modules/auth.service.js';
 import { UserService } from '../modules/user.service.js';
 import { TokenRdo } from '../rdo/token.rdo.js';
 import { UserRdo } from '../rdo/user.rdo.js';
-import { BaseController, HttpError, HttpMethod } from '../libs/rest/index.js';
-import { ValidateDtoMiddleware } from '../middlewares/validate-dto.middleware.js';
 
 export class UserController extends BaseController {
   constructor(
     private readonly userService: UserService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly uploadDirectory: string
   ) {
     super();
 
     this.addRoute({
       path: '/register',
       method: HttpMethod.Post,
-      handler: this.register,
+      handler: this.create,
       middlewares: [
         new ValidateDtoMiddleware(CreateUserDto)
       ]
@@ -35,16 +39,26 @@ export class UserController extends BaseController {
     this.addRoute({
       path: '/login',
       method: HttpMethod.Get,
-      handler: this.checkAuth
+      handler: this.show
     });
     this.addRoute({
       path: '/logout',
       method: HttpMethod.Post,
       handler: this.logout
     });
+    this.addRoute({
+      path: '/:userId/avatar',
+      method: HttpMethod.Post,
+      handler: this.uploadAvatar,
+      middlewares: [
+        new ValidateObjectIdMiddleware('userId'),
+        new UploadFileMiddleware('avatar', this.uploadDirectory),
+        new ValidateDocumentExistsMiddleware(this.userService, 'userId', 'User not found')
+      ]
+    });
   }
 
-  private register = async (req: Request, res: Response) => {
+  private create = async (req: Request, res: Response) => {
     const user = await this.userService.create(req.body as CreateUserDto);
     this.created(res, UserRdo, user);
   };
@@ -55,7 +69,7 @@ export class UserController extends BaseController {
     this.ok(res, TokenRdo, { token });
   };
 
-  private checkAuth = async (req: Request, res: Response) => {
+  private show = async (req: Request, res: Response) => {
     const token = this.extractToken(req);
     const user = await this.authService.getAuthStatus(token);
 
@@ -70,6 +84,17 @@ export class UserController extends BaseController {
     const token = this.extractToken(req);
     this.authService.logout(token);
     this.noContent(res);
+  };
+
+  private uploadAvatar = async (req: Request, res: Response) => {
+    if (!req.file) {
+      throw new HttpError(StatusCodes.BAD_REQUEST, 'Avatar file is required');
+    }
+
+    const userId = this.getParam(req, 'userId');
+    const avatarPath = `/static/${req.file.filename}`;
+    const updatedUser = await this.userService.updateAvatar(userId, avatarPath);
+    this.ok(res, UserRdo, updatedUser);
   };
 
   private extractToken(req: Request): string {

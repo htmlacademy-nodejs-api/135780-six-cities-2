@@ -7,22 +7,28 @@ convict.addFormats(convictFormatWithValidator);
 
 const config = convict({
   PORT: {
-    doc: 'Порт, на котором работает приложение',
+    doc: 'Application port',
     format: 'port',
     default: null,
     env: 'PORT'
   },
   DB_HOST: {
-    doc: 'Адрес сервера базы данных',
+    doc: 'Database host',
     format: 'ipaddress',
     default: null,
     env: 'DB_HOST'
   },
   SALT: {
-    doc: 'Соль для хеширования',
+    doc: 'Password hash salt',
     format: String,
     default: null,
     env: 'SALT'
+  },
+  UPLOAD_DIRECTORY: {
+    doc: 'Directory for uploaded files',
+    format: String,
+    default: 'uploads',
+    env: 'UPLOAD_DIRECTORY'
   }
 });
 

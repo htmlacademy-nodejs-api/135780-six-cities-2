@@ -1,0 +1,13 @@
+@host = http://localhost:3000
+@userId = 000000000000000000000000
+
+### Upload user avatar
+POST {{host}}/users/{{userId}}/avatar
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="avatar"; filename="avatar-angelina.jpg"
+Content-Type: image/jpeg
+
+< ./markup/img/avatar-angelina.jpg
+--WebAppBoundary--

@@ -1,4 +1,5 @@
 import express, { Express } from 'express';
+import path from 'node:path';
 import { injectable } from 'inversify';
 import config from './config.js';
 import logger from './logger.js';
@@ -12,6 +13,7 @@ import { OfferService } from './modules/offer.service.js';
 import { UserService } from './modules/user.service.js';
 
 export enum AppRoute {
+  Static = '/static',
   Users = '/users',
   Offers = '/offers'
 }
@@ -30,11 +32,12 @@ export class Application {
     const authService = new AuthService(userService);
     const offerService = new OfferService();
     const commentService = new CommentService(offerService);
+    const uploadDirectory = path.resolve(config.get('UPLOAD_DIRECTORY'));
 
     this.controllers = [
-      { path: AppRoute.Users, controller: new UserController(userService, authService) },
+      { path: AppRoute.Users, controller: new UserController(userService, authService, uploadDirectory) },
       { path: AppRoute.Offers, controller: new OfferController(offerService) },
-      { path: AppRoute.Offers, controller: new CommentController(commentService) }
+      { path: AppRoute.Offers, controller: new CommentController(commentService, offerService) }
     ];
   }
 
@@ -51,11 +54,12 @@ export class Application {
 
   private registerMiddleware(): void {
     this.app.use(express.json());
+    this.app.use(AppRoute.Static, express.static(path.resolve(config.get('UPLOAD_DIRECTORY'))));
   }
 
   private registerRoutes(): void {
-    this.controllers.forEach(({ path, controller }) => {
-      this.app.use(path, controller.router);
+    this.controllers.forEach(({ path: routePath, controller }) => {
+      this.app.use(routePath, controller.router);
     });
   }
 
