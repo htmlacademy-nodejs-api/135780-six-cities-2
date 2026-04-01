@@ -3,10 +3,9 @@ import { StatusCodes } from 'http-status-codes';
 import { CreateUserDto } from '../dto/create-user.dto.js';
 import { LoginUserDto } from '../dto/login-user.dto.js';
 import { BaseController, HttpError, HttpMethod } from '../libs/rest/index.js';
+import { PrivateRouteMiddleware } from '../middlewares/private-route.middleware.js';
 import { UploadFileMiddleware } from '../middlewares/upload-file.middleware.js';
-import { ValidateDocumentExistsMiddleware } from '../middlewares/validate-document-exists.middleware.js';
 import { ValidateDtoMiddleware } from '../middlewares/validate-dto.middleware.js';
-import { ValidateObjectIdMiddleware } from '../middlewares/validate-object-id.middleware.js';
 import { AuthService } from '../modules/auth.service.js';
 import { UserService } from '../modules/user.service.js';
 import { TokenRdo } from '../rdo/token.rdo.js';
@@ -39,21 +38,26 @@ export class UserController extends BaseController {
     this.addRoute({
       path: '/login',
       method: HttpMethod.Get,
-      handler: this.show
+      handler: this.show,
+      middlewares: [
+        new PrivateRouteMiddleware(this.authService)
+      ]
     });
     this.addRoute({
       path: '/logout',
       method: HttpMethod.Post,
-      handler: this.logout
+      handler: this.logout,
+      middlewares: [
+        new PrivateRouteMiddleware(this.authService)
+      ]
     });
     this.addRoute({
-      path: '/:userId/avatar',
+      path: '/avatar',
       method: HttpMethod.Post,
       handler: this.uploadAvatar,
       middlewares: [
-        new ValidateObjectIdMiddleware('userId'),
-        new UploadFileMiddleware('avatar', this.uploadDirectory),
-        new ValidateDocumentExistsMiddleware(this.userService, 'userId', 'User not found')
+        new PrivateRouteMiddleware(this.authService),
+        new UploadFileMiddleware('avatar', this.uploadDirectory)
       ]
     });
   }
@@ -69,10 +73,9 @@ export class UserController extends BaseController {
     this.ok(res, TokenRdo, { token });
   };
 
-  private show = async (req: Request, res: Response) => {
-    const token = this.extractToken(req);
+  private show = async (_req: Request, res: Response) => {
+    const token = this.getCurrentToken(res);
     const user = await this.authService.getAuthStatus(token);
-
     if (!user) {
       throw new HttpError(StatusCodes.UNAUTHORIZED, 'User is not authorized');
     }
@@ -80,8 +83,8 @@ export class UserController extends BaseController {
     this.ok(res, UserRdo, user);
   };
 
-  private logout = async (req: Request, res: Response) => {
-    const token = this.extractToken(req);
+  private logout = async (_req: Request, res: Response) => {
+    const token = this.getCurrentToken(res);
     this.authService.logout(token);
     this.noContent(res);
   };
@@ -91,17 +94,13 @@ export class UserController extends BaseController {
       throw new HttpError(StatusCodes.BAD_REQUEST, 'Avatar file is required');
     }
 
-    const userId = this.getParam(req, 'userId');
+    const userId = this.getCurrentUserId(res);
     const avatarPath = `/static/${req.file.filename}`;
     const updatedUser = await this.userService.updateAvatar(userId, avatarPath);
+    if (!updatedUser) {
+      throw new HttpError(StatusCodes.NOT_FOUND, 'User not found');
+    }
+
     this.ok(res, UserRdo, updatedUser);
   };
-
-  private extractToken(req: Request): string {
-    try {
-      return this.parseToken(req);
-    } catch {
-      throw new HttpError(StatusCodes.UNAUTHORIZED, 'Authorization token is missing or invalid');
-    }
-  }
 }

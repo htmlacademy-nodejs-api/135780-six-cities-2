@@ -1,17 +1,20 @@
 import { Request, Response } from 'express';
 import { CreateCommentDto } from '../dto/create-comment.dto.js';
 import { BaseController, HttpMethod } from '../libs/rest/index.js';
+import { PrivateRouteMiddleware } from '../middlewares/private-route.middleware.js';
 import { ValidateDocumentExistsMiddleware } from '../middlewares/validate-document-exists.middleware.js';
 import { ValidateDtoMiddleware } from '../middlewares/validate-dto.middleware.js';
 import { ValidateObjectIdMiddleware } from '../middlewares/validate-object-id.middleware.js';
-import { OfferService } from '../modules/offer.service.js';
+import { AuthService } from '../modules/auth.service.js';
 import { CommentService } from '../modules/comment.service.js';
+import { OfferService } from '../modules/offer.service.js';
 import { CommentRdo } from '../rdo/comment.rdo.js';
 
 export class CommentController extends BaseController {
   constructor(
     private readonly commentService: CommentService,
-    private readonly offerService: OfferService
+    private readonly offerService: OfferService,
+    private readonly authService: AuthService
   ) {
     super();
 
@@ -30,6 +33,7 @@ export class CommentController extends BaseController {
       method: HttpMethod.Post,
       handler: this.create,
       middlewares: [
+        new PrivateRouteMiddleware(this.authService),
         new ValidateObjectIdMiddleware('offerId'),
         new ValidateDtoMiddleware(CreateCommentDto),
         new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
@@ -45,8 +49,9 @@ export class CommentController extends BaseController {
 
   private create = async (req: Request, res: Response) => {
     const offerId = this.getParam(req, 'offerId');
+    const userId = this.getCurrentUserId(res);
     const body = req.body as CreateCommentDto;
-    const comment = await this.commentService.create(offerId, body.userId, body);
+    const comment = await this.commentService.create(offerId, userId, body);
     this.created(res, CommentRdo, comment);
   };
 }

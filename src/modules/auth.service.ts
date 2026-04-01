@@ -1,15 +1,27 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
+import { TextEncoder } from 'node:util';
+import { SignJWT, jwtVerify } from 'jose';
 import { Types } from 'mongoose';
+import config from '../config.js';
 import { UserEntity } from '../entities/user.entity.js';
 import { IAuthService } from '../type/auth-service.interface.js';
 import { UserService } from './user.service.js';
 
 const PASSWORD_SALT = 'six-cities-static-salt';
+const JWT_ALGORITHM = 'HS256';
+const JWT_EXPIRES_IN = '7d';
+
+type AuthTokenPayload = {
+  userId: string;
+};
 
 export class AuthService implements IAuthService {
-  private readonly tokens = new Map<string, string>();
+  private readonly revokedTokens = new Set<string>();
+  private readonly jwtSecret: Uint8Array;
 
-  constructor(private readonly userService: UserService = new UserService()) {}
+  constructor(private readonly userService: UserService = new UserService()) {
+    this.jwtSecret = new TextEncoder().encode(config.get('JWT_SECRET'));
+  }
 
   public hashPassword(password: string): string {
     return createHash('sha256')
@@ -28,22 +40,45 @@ export class AuthService implements IAuthService {
       throw new Error('Неверный пароль.');
     }
 
-    const token = randomUUID();
     const userDocument = user as UserEntity & { _id: Types.ObjectId };
-    this.tokens.set(token, userDocument._id.toString());
-    return token;
+
+    return new SignJWT({ userId: userDocument._id.toString() })
+      .setProtectedHeader({ alg: JWT_ALGORITHM })
+      .setIssuedAt()
+      .setExpirationTime(JWT_EXPIRES_IN)
+      .sign(this.jwtSecret);
   }
 
   public logout(token: string): void {
-    this.tokens.delete(token);
+    this.revokedTokens.add(token);
   }
 
-  public verifyToken(token: string): boolean {
-    return this.tokens.has(token);
+  public async verifyToken(token: string): Promise<boolean> {
+    if (this.revokedTokens.has(token)) {
+      return false;
+    }
+
+    try {
+      await jwtVerify(token, this.jwtSecret, { algorithms: [JWT_ALGORITHM] });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  public async getUserIdByToken(token: string): Promise<string | null> {
+    const isTokenValid = await this.verifyToken(token);
+    if (!isTokenValid) {
+      return null;
+    }
+
+    const verifiedToken = await jwtVerify<AuthTokenPayload>(token, this.jwtSecret, { algorithms: [JWT_ALGORITHM] });
+    const userId = verifiedToken.payload.userId;
+    return typeof userId === 'string' ? userId : null;
   }
 
   public async getAuthStatus(token: string): Promise<UserEntity | null> {
-    const userId = this.tokens.get(token);
+    const userId = await this.getUserIdByToken(token);
     if (!userId) {
       return null;
     }

@@ -61,4 +61,22 @@ export abstract class BaseController implements ControllerInterface {
 
     return param;
   }
+
+  protected getCurrentUserId(res: Response): string {
+    const userId = res.locals.userId as string | undefined;
+    if (!userId) {
+      throw new HttpError(StatusCodes.UNAUTHORIZED, 'User is not authorized');
+    }
+
+    return userId;
+  }
+
+  protected getCurrentToken(res: Response): string {
+    const token = res.locals.token as string | undefined;
+    if (!token) {
+      throw new HttpError(StatusCodes.UNAUTHORIZED, 'Authorization token is missing');
+    }
+
+    return token;
+  }
 }

@@ -36,8 +36,8 @@ export class Application {
 
     this.controllers = [
       { path: AppRoute.Users, controller: new UserController(userService, authService, uploadDirectory) },
-      { path: AppRoute.Offers, controller: new OfferController(offerService) },
-      { path: AppRoute.Offers, controller: new CommentController(commentService, offerService) }
+      { path: AppRoute.Offers, controller: new OfferController(offerService, authService) },
+      { path: AppRoute.Offers, controller: new CommentController(commentService, offerService, authService) }
     ];
   }
 
