@@ -24,6 +24,12 @@ const config = convict({
     default: null,
     env: 'SALT'
   },
+  JWT_SECRET: {
+    doc: 'Secret key for JWT signing',
+    format: String,
+    default: 'jwt_secret_key',
+    env: 'JWT_SECRET'
+  },
   UPLOAD_DIRECTORY: {
     doc: 'Directory for uploaded files',
     format: String,

@@ -1,8 +1,9 @@
 @host = http://localhost:3000
-@userId = 000000000000000000000000
+@token = your_jwt_token_here
 
 ### Upload user avatar
-POST {{host}}/users/{{userId}}/avatar
+POST {{host}}/users/avatar
+Authorization: Bearer {{token}}
 Content-Type: multipart/form-data; boundary=WebAppBoundary
 
 --WebAppBoundary

@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsMongoId, IsNumber, IsString, Length, Max, Min } from 'class-validator';
+import { IsNumber, IsString, Length, Max, Min } from 'class-validator';
 
 export class CreateCommentDto {
   @IsString()
@@ -11,7 +11,4 @@ export class CreateCommentDto {
   @Min(1)
   @Max(5)
   public rating!: number;
-
-  @IsMongoId()
-  public userId!: string;
 }
