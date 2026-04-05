@@ -1,4 +1,5 @@
-import fs from 'node:fs';
+﻿import fs from 'node:fs';
+import { access } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { CliOffer, OfferImportPayload } from './offer.type.js';
 
@@ -40,8 +41,8 @@ function parseOfferRow(headers: string[], line: string): OfferImportPayload {
   const values = line.split('\t');
   const offerData: Record<string, unknown> = {};
 
-  headers.forEach((header, idx) => {
-    const value = values[idx] ?? '';
+  headers.forEach((header, index) => {
+    const value = values[index] ?? '';
     offerData[header] = parseValue(header, value);
   });
 
@@ -56,6 +57,7 @@ export function saveOffersToTsv(offers: CliOffer[], filePath: string): Promise<v
     stream.on('finish', resolve);
 
     stream.write(`${TSV_HEADERS.join('\t')}\n`);
+
     offers.forEach((offer) => {
       const row = [
         offer.title,
@@ -88,8 +90,10 @@ export function saveOffersToTsv(offers: CliOffer[], filePath: string): Promise<v
 }
 
 export async function readOffersFromTsv(filePath: string): Promise<OfferImportPayload[]> {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Файл не найден: ${filePath}`);
+  try {
+    await access(filePath);
+  } catch {
+    throw new Error(`File not found: ${filePath}`);
   }
 
   const stream = fs.createReadStream(filePath, { encoding: 'utf-8' });
@@ -120,7 +124,7 @@ export async function readOffersFromTsv(filePath: string): Promise<OfferImportPa
   }
 
   if (!headers) {
-    throw new Error('TSV-файл пустой или не содержит заголовки.');
+    throw new Error('TSV file is empty or does not contain headers');
   }
 
   return offers;

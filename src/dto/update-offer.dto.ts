@@ -1,19 +1,34 @@
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
-  IsEmail,
   IsIn,
+  IsInt,
   IsISO8601,
   IsNumber,
   IsOptional,
   IsString,
   Length,
   Max,
-  Min
+  Min,
+  ValidateNested
 } from 'class-validator';
+
+class CoordinatesDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  public latitude!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  public longitude!: number;
+}
 
 export class UpdateOfferDto {
   @IsOptional()
@@ -51,31 +66,27 @@ export class UpdateOfferDto {
   public isPremium?: boolean;
 
   @IsOptional()
-  @IsBoolean()
-  public isFavorite?: boolean;
-
-  @IsOptional()
   @IsString()
   @IsIn(['apartment', 'house', 'room', 'hotel'])
   public type?: string;
 
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
   @Max(8)
   public bedrooms?: number;
 
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
   @Max(10)
   public maxAdults?: number;
 
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(100)
   @Max(100000)
   public price?: number;
@@ -87,29 +98,7 @@ export class UpdateOfferDto {
   public goods?: string[];
 
   @IsOptional()
-  @IsString()
-  public hostName?: string;
-
-  @IsOptional()
-  @IsEmail()
-  public hostEmail?: string;
-
-  @IsOptional()
-  @IsString()
-  public hostAvatar?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsIn(['обычный', 'pro'])
-  public hostType?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  public latitude?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  public longitude?: number;
+  @ValidateNested()
+  @Type(() => CoordinatesDto)
+  public coordinates?: CoordinatesDto;
 }

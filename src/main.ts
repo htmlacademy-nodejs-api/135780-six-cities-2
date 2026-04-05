@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { Application } from './application.js';
 import container from './container.js';
 import { connectDatabase } from './database.js';
+import logger from './logger.js';
 
 async function bootstrap() {
   await connectDatabase();
@@ -9,4 +10,7 @@ async function bootstrap() {
   app.init();
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  logger.error({ err: error }, 'Application bootstrap failed');
+  process.exitCode = 1;
+});

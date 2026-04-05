@@ -1,7 +1,8 @@
-import { prop, Ref } from '@typegoose/typegoose';
+import { index, prop, Ref } from '@typegoose/typegoose';
 import { UserEntity } from './user.entity.js';
 import { OfferEntity } from './offer.entity.js';
 
+@index({ offer: 1, publicationDate: -1 })
 export class CommentEntity {
   @prop({ required: true })
   public text!: string;

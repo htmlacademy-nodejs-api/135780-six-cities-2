@@ -12,11 +12,17 @@ const config = convict({
     default: null,
     env: 'PORT'
   },
-  DB_HOST: {
-    doc: 'Database host',
-    format: 'ipaddress',
+  DB_CONNECTION_URI: {
+    doc: 'MongoDB connection URI',
+    format: String,
     default: null,
-    env: 'DB_HOST'
+    env: 'DB_CONNECTION_URI'
+  },
+  DB_NAME: {
+    doc: 'MongoDB database name',
+    format: String,
+    default: null,
+    env: 'DB_NAME'
   },
   SALT: {
     doc: 'Password hash salt',
@@ -27,7 +33,7 @@ const config = convict({
   JWT_SECRET: {
     doc: 'Secret key for JWT signing',
     format: String,
-    default: 'jwt_secret_key',
+    default: null,
     env: 'JWT_SECRET'
   },
   UPLOAD_DIRECTORY: {
@@ -35,6 +41,12 @@ const config = convict({
     format: String,
     default: 'uploads',
     env: 'UPLOAD_DIRECTORY'
+  },
+  DEFAULT_AVATAR_URL: {
+    doc: 'Default avatar URL for users without uploaded avatar',
+    format: String,
+    default: 'https://c-cdnet.cdn.smule.com/smule-gg-uw1-z-1/account/picture/a3/33/4af4ebe6-9227-4791-94f1-4cb268b382bf.jpg',
+    env: 'DEFAULT_AVATAR_URL'
   }
 });
 

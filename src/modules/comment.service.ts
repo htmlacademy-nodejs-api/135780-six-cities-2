@@ -28,6 +28,7 @@ export class CommentService implements ICommentService {
       publicationDate: new Date()
     });
 
+    await comment.populate('user');
     await this.offerService.recalculateRatingAndCommentsCount(offerId);
     return comment;
   }

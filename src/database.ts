@@ -1,15 +1,19 @@
-import mongoose from 'mongoose';
+﻿import mongoose from 'mongoose';
 import logger from './logger.js';
 import config from './config.js';
 
 export async function connectDatabase() {
-  const dbHost = config.get('DB_HOST');
-  logger.info(`Попытка подключения к базе данных по адресу: ${dbHost}`);
+  const dbConnectionUri = config.get('DB_CONNECTION_URI');
+  const dbName = config.get('DB_NAME');
+  const connectionUri = `${dbConnectionUri}/${dbName}`;
+
+  logger.info(`Trying to connect to database: ${connectionUri}`);
+
   try {
-    await mongoose.connect(`mongodb://${dbHost}/six-cities`);
-    logger.info('Соединение с базой данных установлено');
+    await mongoose.connect(connectionUri);
+    logger.info('Database connection established');
   } catch (error) {
-    logger.error('Ошибка подключения к базе данных:');
+    logger.error('Database connection failed');
     throw error;
   }
 }

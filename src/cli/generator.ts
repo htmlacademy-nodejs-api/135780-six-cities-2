@@ -1,17 +1,56 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import { CliOffer } from './offer.type.js';
+
+type CityName = 'Paris' | 'Cologne' | 'Brussels' | 'Amsterdam' | 'Hamburg' | 'Dusseldorf';
+
+const CITY_COORDINATES: Record<CityName, { latitude: number; longitude: number }> = {
+  Paris: { latitude: 48.85661, longitude: 2.351499 },
+  Cologne: { latitude: 50.938361, longitude: 6.959974 },
+  Brussels: { latitude: 50.846557, longitude: 4.351697 },
+  Amsterdam: { latitude: 52.370216, longitude: 4.895168 },
+  Hamburg: { latitude: 53.550341, longitude: 10.000654 },
+  Dusseldorf: { latitude: 51.225402, longitude: 6.776314 }
+};
+
+const CITIES = Object.keys(CITY_COORDINATES) as CityName[];
+const OFFER_TYPES = ['apartment', 'house', 'room', 'hotel'] as const;
+const OFFER_GOODS = [
+  'Breakfast',
+  'Air conditioning',
+  'Laptop friendly workspace',
+  'Baby seat',
+  'Washer',
+  'Towels',
+  'Fridge'
+] as const;
 
 function getRandomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function getRandomElement<T>(arr: T[]): T {
-  return arr[getRandomInt(0, arr.length - 1)];
+function getRandomElement<T>(items: T[]): T {
+  return items[getRandomInt(0, items.length - 1)];
 }
 
-function getRandomElements<T>(arr: T[], min = 1, max = arr.length): T[] {
+function getRandomElements<T>(items: T[], min = 1, max = items.length): T[] {
   const count = getRandomInt(min, max);
-  return arr.sort(() => 0.5 - Math.random()).slice(0, count);
+  const shuffledItems = [...items].sort(() => 0.5 - Math.random());
+
+  return shuffledItems.slice(0, count);
+}
+
+function generateImages(baseImages: string[]): string[] {
+  if (baseImages.length >= 6) {
+    return baseImages.slice(0, 6);
+  }
+
+  const generatedImages = [...baseImages];
+
+  while (generatedImages.length < 6) {
+    generatedImages.push(`https://picsum.photos/seed/${getRandomInt(1, 100000)}/640/480`);
+  }
+
+  return generatedImages;
 }
 
 export async function fetchBaseOffers(url: string): Promise<Partial<CliOffer>[]> {
@@ -20,42 +59,38 @@ export async function fetchBaseOffers(url: string): Promise<Partial<CliOffer>[]>
 }
 
 export function generateOffer(baseOffer: Partial<CliOffer>): CliOffer {
-  const cities = ['Paris', 'Cologne', 'Brussels', 'Amsterdam', 'Hamburg', 'Dusseldorf'];
-  const types = ['apartment', 'house', 'room', 'hotel'];
-  const goods = [
-    'Breakfast', 'Air conditioning', 'Laptop friendly workspace',
-    'Baby seat', 'Washer', 'Towels', 'Fridge'
-  ];
+  const city = getRandomElement(CITIES);
+  const cityCoordinates = CITY_COORDINATES[city];
 
   return {
-    title: `${baseOffer.title ?? 'Без названия'} ${getRandomInt(1, 1000)}`,
-    description: `${baseOffer.description ?? 'Без описания'} (${getRandomInt(1, 1000)})`,
+    title: `${baseOffer.title ?? 'Offer'} ${getRandomInt(1, 1000)}`,
+    description: `${baseOffer.description ?? 'Comfortable place for staying'} (${getRandomInt(1, 1000)})`,
     publicationDate: new Date().toISOString(),
-    city: getRandomElement(cities),
-    previewImage: baseOffer.previewImage ?? '',
-    images: baseOffer.images ?? [],
+    city,
+    previewImage: baseOffer.previewImage ?? 'https://picsum.photos/300/200',
+    images: generateImages(baseOffer.images ?? []),
     isPremium: Math.random() > 0.5,
-    isFavorite: Math.random() > 0.5,
-    rating: +(Math.random() * 5).toFixed(1),
-    type: getRandomElement(types),
+    isFavorite: false,
+    rating: 0,
+    type: getRandomElement([...OFFER_TYPES]),
     bedrooms: getRandomInt(1, 8),
     maxAdults: getRandomInt(1, 10),
     price: getRandomInt(100, 100000),
-    goods: getRandomElements(goods, 1, goods.length),
-    hostName: baseOffer.hostName ?? 'Без имени',
-    hostEmail: baseOffer.hostEmail ?? '',
-    hostAvatar: baseOffer.hostAvatar ?? '',
-    hostType: getRandomElement(['обычный', 'pro']),
-    latitude: baseOffer.latitude ? +(baseOffer.latitude + Math.random() * 0.01).toFixed(6) : 0,
-    longitude: baseOffer.longitude ? +(baseOffer.longitude + Math.random() * 0.01).toFixed(6) : 0
+    goods: getRandomElements([...OFFER_GOODS], 1, OFFER_GOODS.length),
+    hostName: baseOffer.hostName ?? 'Host',
+    hostEmail: baseOffer.hostEmail ?? `host${getRandomInt(1, 99999)}@mail.com`,
+    hostAvatar: baseOffer.hostAvatar ?? 'https://picsum.photos/seed/avatar/200/200',
+    hostType: baseOffer.hostType ?? 'pro',
+    latitude: cityCoordinates.latitude,
+    longitude: cityCoordinates.longitude
   };
 }
 
 export function generateOffers(count: number, baseOffers: Partial<CliOffer>[]): CliOffer[] {
   const offers: CliOffer[] = [];
 
-  for (let i = 0; i < count; i++) {
-    const baseOffer = baseOffers[getRandomInt(0, baseOffers.length - 1)];
+  for (let index = 0; index < count; index++) {
+    const baseOffer = baseOffers[getRandomInt(0, baseOffers.length - 1)] ?? {};
     offers.push(generateOffer(baseOffer));
   }
 

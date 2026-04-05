@@ -1,13 +1,12 @@
-import { createHash } from 'node:crypto';
-import { TextEncoder } from 'node:util';
+﻿import { TextEncoder } from 'node:util';
 import { SignJWT, jwtVerify } from 'jose';
 import { Types } from 'mongoose';
 import config from '../config.js';
 import { UserEntity } from '../entities/user.entity.js';
 import { IAuthService } from '../type/auth-service.interface.js';
+import { hashPassword } from '../utils/password.js';
 import { UserService } from './user.service.js';
 
-const PASSWORD_SALT = 'six-cities-static-salt';
 const JWT_ALGORITHM = 'HS256';
 const JWT_EXPIRES_IN = '7d';
 
@@ -20,24 +19,27 @@ export class AuthService implements IAuthService {
   private readonly jwtSecret: Uint8Array;
 
   constructor(private readonly userService: UserService = new UserService()) {
-    this.jwtSecret = new TextEncoder().encode(config.get('JWT_SECRET'));
+    const jwtSecret = config.get('JWT_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not configured');
+    }
+
+    this.jwtSecret = new TextEncoder().encode(jwtSecret);
   }
 
   public hashPassword(password: string): string {
-    return createHash('sha256')
-      .update(`${password}:${PASSWORD_SALT}`)
-      .digest('hex');
+    return hashPassword(password);
   }
 
   public async login(email: string, password: string): Promise<string> {
     const user = await this.userService.findByEmail(email);
     if (!user) {
-      throw new Error('Пользователь с таким email не найден.');
+      throw new Error('User with this email does not exist');
     }
 
     const passwordHash = this.hashPassword(password);
     if (user.password !== passwordHash) {
-      throw new Error('Неверный пароль.');
+      throw new Error('Invalid password');
     }
 
     const userDocument = user as UserEntity & { _id: Types.ObjectId };

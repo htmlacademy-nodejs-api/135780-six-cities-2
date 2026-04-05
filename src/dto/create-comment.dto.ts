@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNumber, IsString, Length, Max, Min } from 'class-validator';
+import { IsInt, IsString, Length, Max, Min } from 'class-validator';
 
 export class CreateCommentDto {
   @IsString()
@@ -7,7 +7,7 @@ export class CreateCommentDto {
   public text!: string;
 
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
   @Max(5)
   public rating!: number;

@@ -4,21 +4,18 @@ info:
   version: 1.0.0
   description: REST API for the Six Cities project.
 servers:
-  - url: http://localhost:5000/api
+  - url: http://localhost:3000
     description: Local development server
+
 tags:
-  - name: users
-    description: User registration and authentication
-  - name: offers
-    description: Offer management and listing
-  - name: comments
-    description: Offer comments
+  - name: Users
+  - name: Offers
+  - name: Comments
 
 paths:
   /users/register:
     post:
-      tags:
-        - users
+      tags: [Users]
       summary: Register a new user
       operationId: registerUser
       requestBody:
@@ -37,17 +34,12 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
-          description: User with this email already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/Conflict'
 
   /users/login:
     post:
-      tags:
-        - users
-      summary: Login user and return access token
+      tags: [Users]
+      summary: Login and get JWT token
       operationId: loginUser
       requestBody:
         required: true
@@ -57,7 +49,7 @@ paths:
               $ref: '#/components/schemas/LoginUser'
       responses:
         '200':
-          description: Login successful
+          description: Token generated
           content:
             application/json:
               schema:
@@ -66,10 +58,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
     get:
-      tags:
-        - users
-      summary: Check user authentication status
+      tags: [Users]
+      summary: Check user authorization status
       operationId: getAuthStatus
       security:
         - bearerAuth: []
@@ -85,39 +77,67 @@ paths:
 
   /users/logout:
     post:
-      tags:
-        - users
+      tags: [Users]
       summary: Logout user
       operationId: logoutUser
       security:
         - bearerAuth: []
       responses:
         '204':
-          description: Logout successful
+          description: User logged out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/avatar:
+    post:
+      tags: [Users]
+      summary: Upload user avatar
+      operationId: uploadAvatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
   /offers:
     get:
-      tags:
-        - offers
+      tags: [Offers]
       summary: Get offers list
       operationId: getOffers
       parameters:
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: Offers list sorted by publication date desc
+          description: Offers sorted by publication date desc
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/OfferSummary'
+
     post:
-      tags:
-        - offers
-      summary: Create a new offer
+      tags: [Offers]
+      summary: Create new offer
       operationId: createOffer
       security:
         - bearerAuth: []
@@ -129,7 +149,7 @@ paths:
               $ref: '#/components/schemas/NewOffer'
       responses:
         '201':
-          description: Created offer
+          description: Offer created
           content:
             application/json:
               schema:
@@ -141,10 +161,9 @@ paths:
 
   /offers/{offerId}:
     get:
-      tags:
-        - offers
+      tags: [Offers]
       summary: Get offer details
-      operationId: getOfferById
+      operationId: showOffer
       parameters:
         - $ref: '#/components/parameters/OfferId'
       responses:
@@ -154,11 +173,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OfferDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+
     patch:
-      tags:
-        - offers
+      tags: [Offers]
       summary: Update offer
       operationId: updateOffer
       security:
@@ -173,7 +194,7 @@ paths:
               $ref: '#/components/schemas/UpdateOffer'
       responses:
         '200':
-          description: Updated offer
+          description: Offer updated
           content:
             application/json:
               schema:
@@ -186,9 +207,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
     delete:
-      tags:
-        - offers
+      tags: [Offers]
       summary: Delete offer
       operationId: deleteOffer
       security:
@@ -198,6 +219,8 @@ paths:
       responses:
         '204':
           description: Offer deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -207,15 +230,14 @@ paths:
 
   /offers/premium/{city}:
     get:
-      tags:
-        - offers
+      tags: [Offers]
       summary: Get premium offers by city
-      operationId: getPremiumOffersByCity
+      operationId: getPremiumOffers
       parameters:
         - $ref: '#/components/parameters/City'
       responses:
         '200':
-          description: Up to 3 premium offers sorted by publication date desc
+          description: Up to 3 premium offers
           content:
             application/json:
               schema:
@@ -226,9 +248,8 @@ paths:
 
   /offers/favorites:
     get:
-      tags:
-        - offers
-      summary: Get favorite offers for authorized user
+      tags: [Offers]
+      summary: Get favorite offers for current user
       operationId: getFavoriteOffers
       security:
         - bearerAuth: []
@@ -246,8 +267,7 @@ paths:
 
   /offers/{offerId}/favorite:
     post:
-      tags:
-        - offers
+      tags: [Offers]
       summary: Add offer to favorites
       operationId: addOfferToFavorites
       security:
@@ -256,18 +276,20 @@ paths:
         - $ref: '#/components/parameters/OfferId'
       responses:
         '200':
-          description: Updated offer state
+          description: Offer state updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OfferDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
     delete:
-      tags:
-        - offers
+      tags: [Offers]
       summary: Remove offer from favorites
       operationId: removeOfferFromFavorites
       security:
@@ -276,11 +298,13 @@ paths:
         - $ref: '#/components/parameters/OfferId'
       responses:
         '200':
-          description: Updated offer state
+          description: Offer state updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OfferDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -288,15 +312,14 @@ paths:
 
   /offers/{offerId}/comments:
     get:
-      tags:
-        - comments
+      tags: [Comments]
       summary: Get comments for offer
-      operationId: getCommentsByOfferId
+      operationId: getComments
       parameters:
         - $ref: '#/components/parameters/OfferId'
       responses:
         '200':
-          description: Up to 50 latest comments sorted by publication date desc
+          description: Up to 50 latest comments
           content:
             application/json:
               schema:
@@ -304,12 +327,14 @@ paths:
                 maxItems: 50
                 items:
                   $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+
     post:
-      tags:
-        - comments
-      summary: Create comment for offer
+      tags: [Comments]
+      summary: Add comment to offer
       operationId: createComment
       security:
         - bearerAuth: []
@@ -347,7 +372,6 @@ components:
       name: offerId
       in: path
       required: true
-      description: Offer identifier
       schema:
         type: string
         pattern: '^[a-fA-F0-9]{24}$'
@@ -361,7 +385,6 @@ components:
       name: limit
       in: query
       required: false
-      description: Number of offers to return (default 60)
       schema:
         type: integer
         minimum: 1
@@ -370,13 +393,13 @@ components:
 
   responses:
     BadRequest:
-      description: Validation error
+      description: Request validation failed
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
     Unauthorized:
-      description: Authentication required or invalid token
+      description: User is not authorized
       content:
         application/json:
           schema:
@@ -388,13 +411,23 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     NotFound:
-      description: Resource not found
+      description: Entity not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Entity conflict
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
 
   schemas:
+    UserType:
+      type: string
+      enum: ['обычный', 'pro']
+
     City:
       type: string
       enum:
@@ -413,12 +446,6 @@ components:
         - room
         - hotel
 
-    UserType:
-      type: string
-      enum:
-        - обычный
-        - pro
-
     Goods:
       type: string
       enum:
@@ -432,25 +459,20 @@ components:
 
     Coordinates:
       type: object
-      required:
-        - latitude
-        - longitude
+      required: [latitude, longitude]
       properties:
         latitude:
           type: number
-          format: float
+          minimum: -90
+          maximum: 90
         longitude:
           type: number
-          format: float
+          minimum: -180
+          maximum: 180
 
     User:
       type: object
-      required:
-        - id
-        - name
-        - email
-        - avatarUrl
-        - type
+      required: [id, name, email, avatarUrl, type]
       properties:
         id:
           type: string
@@ -470,11 +492,7 @@ components:
 
     NewUser:
       type: object
-      required:
-        - name
-        - email
-        - password
-        - type
+      required: [name, email, password, type]
       properties:
         name:
           type: string
@@ -483,10 +501,10 @@ components:
         email:
           type: string
           format: email
-        avatarUrl:
+        avatar:
           type: string
           format: uri
-          pattern: '^https?:\/\/.*\.(jpg|png)$'
+          pattern: '.*\.(jpg|png)$'
         password:
           type: string
           minLength: 6
@@ -496,9 +514,7 @@ components:
 
     LoginUser:
       type: object
-      required:
-        - email
-        - password
+      required: [email, password]
       properties:
         email:
           type: string
@@ -510,8 +526,7 @@ components:
 
     TokenPayload:
       type: object
-      required:
-        - token
+      required: [token]
       properties:
         token:
           type: string
@@ -564,6 +579,10 @@ components:
           type: integer
           minimum: 0
 
+    Host:
+      allOf:
+        - $ref: '#/components/schemas/User'
+
     OfferDetail:
       allOf:
         - $ref: '#/components/schemas/OfferSummary'
@@ -602,7 +621,7 @@ components:
               items:
                 $ref: '#/components/schemas/Goods'
             host:
-              $ref: '#/components/schemas/User'
+              $ref: '#/components/schemas/Host'
             coordinates:
               $ref: '#/components/schemas/Coordinates'
 
@@ -616,8 +635,6 @@ components:
         - previewImage
         - images
         - isPremium
-        - isFavorite
-        - rating
         - type
         - bedrooms
         - maxAdults
@@ -650,12 +667,6 @@ components:
             format: uri
         isPremium:
           type: boolean
-        isFavorite:
-          type: boolean
-        rating:
-          type: number
-          minimum: 0
-          maximum: 5
         type:
           $ref: '#/components/schemas/OfferType'
         bedrooms:
@@ -707,12 +718,6 @@ components:
             format: uri
         isPremium:
           type: boolean
-        isFavorite:
-          type: boolean
-        rating:
-          type: number
-          minimum: 0
-          maximum: 5
         type:
           $ref: '#/components/schemas/OfferType'
         bedrooms:
@@ -737,12 +742,7 @@ components:
 
     Comment:
       type: object
-      required:
-        - id
-        - text
-        - publicationDate
-        - rating
-        - user
+      required: [id, text, publicationDate, rating, user]
       properties:
         id:
           type: string
@@ -763,9 +763,7 @@ components:
 
     NewComment:
       type: object
-      required:
-        - text
-        - rating
+      required: [text, rating]
       properties:
         text:
           type: string
@@ -778,8 +776,7 @@ components:
 
     Error:
       type: object
-      required:
-        - message
+      required: [message]
       properties:
         message:
           type: string

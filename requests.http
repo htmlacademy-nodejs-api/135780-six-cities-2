@@ -1,7 +1,28 @@
-@host = http://localhost:3000
+﻿@host = http://localhost:3000
 @token = your_jwt_token_here
+@offerId = 000000000000000000000000
 
-### Upload user avatar
+### Register user
+POST {{host}}/users/register
+Content-Type: application/json
+
+{
+  "name": "Alex",
+  "email": "alex@example.com",
+  "password": "123456",
+  "type": "обычный"
+}
+
+### Login
+POST {{host}}/users/login
+Content-Type: application/json
+
+{
+  "email": "alex@example.com",
+  "password": "123456"
+}
+
+### Upload avatar
 POST {{host}}/users/avatar
 Authorization: Bearer {{token}}
 Content-Type: multipart/form-data; boundary=WebAppBoundary
@@ -12,3 +33,44 @@ Content-Type: image/jpeg
 
 < ./markup/img/avatar-angelina.jpg
 --WebAppBoundary--
+
+### Create offer
+POST {{host}}/offers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Comfortable apartment in city center",
+  "description": "Large apartment with everything needed for long and short stays.",
+  "publicationDate": "2026-04-05T10:00:00.000Z",
+  "city": "Paris",
+  "previewImage": "https://picsum.photos/300/200",
+  "images": [
+    "https://picsum.photos/id/1/640/480",
+    "https://picsum.photos/id/2/640/480",
+    "https://picsum.photos/id/3/640/480",
+    "https://picsum.photos/id/4/640/480",
+    "https://picsum.photos/id/5/640/480",
+    "https://picsum.photos/id/6/640/480"
+  ],
+  "isPremium": true,
+  "type": "apartment",
+  "bedrooms": 2,
+  "maxAdults": 4,
+  "price": 950,
+  "goods": ["Breakfast", "Washer"],
+  "coordinates": {
+    "latitude": 48.85661,
+    "longitude": 2.351499
+  }
+}
+
+### Add comment
+POST {{host}}/offers/{{offerId}}/comments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "text": "Great place, very clean and cozy",
+  "rating": 5
+}

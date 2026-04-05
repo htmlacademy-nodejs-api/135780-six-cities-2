@@ -15,12 +15,14 @@
     "compile": "tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "ts": "ts-node",
+    "cli": "npm run compile && node ./dist/cli.js",
     "mock-server": "json-server --watch ./mocks/mock-server-data.json --port 3001",
     "start:pretty": "node ./dist/main.js | pino-pretty"
   },
   "devDependencies": {
     "@types/convict": "^6.1.6",
     "@types/convict-format-with-validator": "^6.0.6",
+    "@types/cors": "^2.8.19",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.6",
     "@types/inversify": "^2.0.32",
@@ -50,6 +52,7 @@
     "class-validator": "^0.15.1",
     "convict": "^6.2.4",
     "convict-format-with-validator": "^6.2.0",
+    "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "express-async-handler": "^1.2.0",

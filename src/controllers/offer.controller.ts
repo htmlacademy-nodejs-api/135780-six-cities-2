@@ -1,15 +1,18 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
 import { CreateOfferDto } from '../dto/create-offer.dto.js';
 import { GetOffersQueryDto } from '../dto/get-offers.query.dto.js';
 import { UpdateOfferDto } from '../dto/update-offer.dto.js';
-import { BaseController, HttpMethod } from '../libs/rest/index.js';
+import { BaseController, HttpError, HttpMethod } from '../libs/rest/index.js';
 import { OptionalAuthMiddleware } from '../middlewares/optional-auth.middleware.js';
 import { PrivateRouteMiddleware } from '../middlewares/private-route.middleware.js';
 import { ValidateDocumentExistsMiddleware } from '../middlewares/validate-document-exists.middleware.js';
 import { ValidateDtoMiddleware } from '../middlewares/validate-dto.middleware.js';
 import { ValidateObjectIdMiddleware } from '../middlewares/validate-object-id.middleware.js';
+import { ValidateOfferOwnerMiddleware } from '../middlewares/validate-offer-owner.middleware.js';
 import { AuthService } from '../modules/auth.service.js';
 import { OfferService } from '../modules/offer.service.js';
+import { OfferPreviewRdo } from '../rdo/offer-preview.rdo.js';
 import { OfferRdo } from '../rdo/offer.rdo.js';
 
 export class OfferController extends BaseController {
@@ -28,6 +31,7 @@ export class OfferController extends BaseController {
         new ValidateDtoMiddleware(GetOffersQueryDto, 'query')
       ]
     });
+
     this.addRoute({
       path: '/',
       method: HttpMethod.Post,
@@ -37,16 +41,17 @@ export class OfferController extends BaseController {
         new ValidateDtoMiddleware(CreateOfferDto)
       ]
     });
+
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Get,
       handler: this.show,
       middlewares: [
         new OptionalAuthMiddleware(this.authService),
-        new ValidateObjectIdMiddleware('offerId'),
-        new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
+        new ValidateObjectIdMiddleware('offerId')
       ]
     });
+
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Patch,
@@ -55,9 +60,10 @@ export class OfferController extends BaseController {
         new PrivateRouteMiddleware(this.authService),
         new ValidateObjectIdMiddleware('offerId'),
         new ValidateDtoMiddleware(UpdateOfferDto),
-        new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
+        new ValidateOfferOwnerMiddleware(this.offerService)
       ]
     });
+
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Delete,
@@ -65,9 +71,10 @@ export class OfferController extends BaseController {
       middlewares: [
         new PrivateRouteMiddleware(this.authService),
         new ValidateObjectIdMiddleware('offerId'),
-        new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
+        new ValidateOfferOwnerMiddleware(this.offerService)
       ]
     });
+
     this.addRoute({
       path: '/premium/:city',
       method: HttpMethod.Get,
@@ -76,6 +83,7 @@ export class OfferController extends BaseController {
         new OptionalAuthMiddleware(this.authService)
       ]
     });
+
     this.addRoute({
       path: '/favorites',
       method: HttpMethod.Get,
@@ -84,6 +92,7 @@ export class OfferController extends BaseController {
         new PrivateRouteMiddleware(this.authService)
       ]
     });
+
     this.addRoute({
       path: '/:offerId/favorite',
       method: HttpMethod.Post,
@@ -94,6 +103,7 @@ export class OfferController extends BaseController {
         new ValidateDocumentExistsMiddleware(this.offerService, 'offerId', 'Offer not found')
       ]
     });
+
     this.addRoute({
       path: '/:offerId/favorite',
       method: HttpMethod.Delete,
@@ -110,7 +120,7 @@ export class OfferController extends BaseController {
     const query = req.query as unknown as GetOffersQueryDto;
     const userId = res.locals.userId as string | undefined;
     const offers = await this.offerService.getList(query.limit, userId);
-    this.ok(res, OfferRdo, offers);
+    this.ok(res, OfferPreviewRdo, offers);
   };
 
   private create = async (req: Request, res: Response) => {
@@ -124,6 +134,11 @@ export class OfferController extends BaseController {
     const offerId = this.getParam(req, 'offerId');
     const userId = res.locals.userId as string | undefined;
     const offer = await this.offerService.findById(offerId, userId);
+
+    if (!offer) {
+      throw new HttpError(StatusCodes.NOT_FOUND, 'Offer not found');
+    }
+
     this.ok(res, OfferRdo, offer);
   };
 
@@ -131,6 +146,11 @@ export class OfferController extends BaseController {
     const offerId = this.getParam(req, 'offerId');
     const body = req.body as UpdateOfferDto;
     const offer = await this.offerService.update(offerId, body);
+
+    if (!offer) {
+      throw new HttpError(StatusCodes.NOT_FOUND, 'Offer not found');
+    }
+
     this.ok(res, OfferRdo, offer);
   };
 
@@ -144,19 +164,24 @@ export class OfferController extends BaseController {
     const city = this.getParam(req, 'city');
     const userId = res.locals.userId as string | undefined;
     const offers = await this.offerService.getPremiumByCity(city, userId);
-    this.ok(res, OfferRdo, offers);
+    this.ok(res, OfferPreviewRdo, offers);
   };
 
   private favorites = async (_req: Request, res: Response) => {
     const userId = this.getCurrentUserId(res);
     const offers = await this.offerService.getFavorites(userId);
-    this.ok(res, OfferRdo, offers);
+    this.ok(res, OfferPreviewRdo, offers);
   };
 
   private addFavorite = async (req: Request, res: Response) => {
     const offerId = this.getParam(req, 'offerId');
     const userId = this.getCurrentUserId(res);
     const offer = await this.offerService.setFavoriteStatus(offerId, userId, true);
+
+    if (!offer) {
+      throw new HttpError(StatusCodes.NOT_FOUND, 'Offer not found');
+    }
+
     this.ok(res, OfferRdo, offer);
   };
 
@@ -164,6 +189,11 @@ export class OfferController extends BaseController {
     const offerId = this.getParam(req, 'offerId');
     const userId = this.getCurrentUserId(res);
     const offer = await this.offerService.setFavoriteStatus(offerId, userId, false);
+
+    if (!offer) {
+      throw new HttpError(StatusCodes.NOT_FOUND, 'Offer not found');
+    }
+
     this.ok(res, OfferRdo, offer);
   };
 }

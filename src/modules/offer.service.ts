@@ -1,11 +1,11 @@
+﻿import { Types } from 'mongoose';
 import { CreateOfferDto } from '../dto/create-offer.dto.js';
 import { UpdateOfferDto } from '../dto/update-offer.dto.js';
-import { Types } from 'mongoose';
 import { OfferEntity } from '../entities/offer.entity.js';
 import { CommentModel } from '../models/comment.model.js';
 import { OfferModel } from '../models/offer.model.js';
-import { FavoriteService } from './favorite.service.js';
 import { IOfferService } from '../type/offer-service.interface.js';
+import { FavoriteService } from './favorite.service.js';
 
 const DEFAULT_OFFERS_LIMIT = 60;
 const PREMIUM_OFFERS_LIMIT = 3;
@@ -16,11 +16,15 @@ type OfferRatingAggregation = {
   commentsCount: number;
 };
 
+type OfferDocument = OfferEntity & {
+  _id: Types.ObjectId;
+};
+
 export class OfferService implements IOfferService {
   constructor(private readonly favoriteService: FavoriteService = new FavoriteService()) {}
 
-  async findById(id: string, userId?: string): Promise<OfferEntity | null> {
-    const offer = await OfferModel.findById(id).exec();
+  public async findById(id: string, userId?: string): Promise<OfferEntity | null> {
+    const offer = await OfferModel.findById(id).populate('author').exec();
     if (!offer) {
       return null;
     }
@@ -28,37 +32,67 @@ export class OfferService implements IOfferService {
     return this.setFavoriteFlagForOffer(offer, userId);
   }
 
-  async create(offerData: CreateOfferDto, userId: string): Promise<OfferEntity> {
-    return OfferModel.create({
-      ...offerData,
+  public async create(offerData: CreateOfferDto, userId: string): Promise<OfferEntity> {
+    const createdOffer = await OfferModel.create({
+      title: offerData.title,
+      description: offerData.description,
       publicationDate: new Date(offerData.publicationDate),
+      city: offerData.city,
+      previewImage: offerData.previewImage,
+      images: offerData.images,
+      isPremium: offerData.isPremium,
+      type: offerData.type,
+      bedrooms: offerData.bedrooms,
+      maxAdults: offerData.maxAdults,
+      price: offerData.price,
+      goods: offerData.goods,
+      latitude: offerData.coordinates.latitude,
+      longitude: offerData.coordinates.longitude,
       author: new Types.ObjectId(userId),
       commentsCount: 0,
       rating: 0,
       isFavorite: false
     });
+
+    const offer = await this.findById(createdOffer._id.toString(), userId);
+
+    if (!offer) {
+      throw new Error('Failed to load created offer');
+    }
+
+    return offer;
   }
 
-  async update(offerId: string, updateData: UpdateOfferDto): Promise<OfferEntity | null> {
-    const updatePayload = {
-      ...updateData,
-      publicationDate: updateData.publicationDate ? new Date(updateData.publicationDate) : undefined
+  public async update(offerId: string, updateData: UpdateOfferDto): Promise<OfferEntity | null> {
+    const { coordinates, publicationDate, ...restData } = updateData;
+    const updatePayload: Partial<OfferEntity> = {
+      ...restData,
+      publicationDate: publicationDate ? new Date(publicationDate) : undefined
     };
 
-    return OfferModel.findByIdAndUpdate(offerId, updatePayload, { new: true }).exec();
+    if (coordinates) {
+      updatePayload.latitude = coordinates.latitude;
+      updatePayload.longitude = coordinates.longitude;
+    }
+
+    return OfferModel.findByIdAndUpdate(offerId, updatePayload, { new: true })
+      .populate('author')
+      .exec();
   }
 
-  async delete(offerId: string): Promise<void> {
-    await OfferModel.findByIdAndDelete(offerId).exec();
+  public async delete(offerId: string): Promise<void> {
     await CommentModel.deleteMany({ offer: offerId }).exec();
+    await this.favoriteService.removeByOfferId(offerId);
+    await OfferModel.findByIdAndDelete(offerId).exec();
   }
 
-  async getList(limit = DEFAULT_OFFERS_LIMIT, userId?: string): Promise<OfferEntity[]> {
+  public async getList(limit = DEFAULT_OFFERS_LIMIT, userId?: string): Promise<OfferEntity[]> {
     const offers = await OfferModel.find().sort({ publicationDate: -1 }).limit(limit).exec();
+
     return this.setFavoriteFlagForList(offers, userId);
   }
 
-  async getPremiumByCity(city: string, userId?: string): Promise<OfferEntity[]> {
+  public async getPremiumByCity(city: string, userId?: string): Promise<OfferEntity[]> {
     const offers = await OfferModel.find({ city, isPremium: true })
       .sort({ publicationDate: -1 })
       .limit(PREMIUM_OFFERS_LIMIT)
@@ -67,7 +101,7 @@ export class OfferService implements IOfferService {
     return this.setFavoriteFlagForList(offers, userId);
   }
 
-  async getFavorites(userId: string): Promise<OfferEntity[]> {
+  public async getFavorites(userId: string): Promise<OfferEntity[]> {
     const offerIds = await this.favoriteService.getByUserId(userId);
 
     if (offerIds.length === 0) {
@@ -84,7 +118,7 @@ export class OfferService implements IOfferService {
     });
   }
 
-  async setFavoriteStatus(offerId: string, userId: string, isFavorite: boolean): Promise<OfferEntity | null> {
+  public async setFavoriteStatus(offerId: string, userId: string, isFavorite: boolean): Promise<OfferEntity | null> {
     if (isFavorite) {
       await this.favoriteService.add(userId, offerId);
     } else {
@@ -94,7 +128,7 @@ export class OfferService implements IOfferService {
     return this.findById(offerId, userId);
   }
 
-  async recalculateRatingAndCommentsCount(offerId: string): Promise<void> {
+  public async recalculateRatingAndCommentsCount(offerId: string): Promise<void> {
     const aggregationResult = await CommentModel.aggregate<OfferRatingAggregation>([
       { $match: { offer: new Types.ObjectId(offerId) } },
       {
@@ -127,7 +161,7 @@ export class OfferService implements IOfferService {
     const favoriteOfferIds = new Set(await this.favoriteService.getByUserId(userId));
 
     return offers.map((offer) => {
-      const offerDocument = offer as OfferEntity & { _id: Types.ObjectId };
+      const offerDocument = offer as OfferDocument;
       offer.isFavorite = favoriteOfferIds.has(offerDocument._id.toString());
       return offer;
     });
@@ -139,7 +173,7 @@ export class OfferService implements IOfferService {
       return offer;
     }
 
-    const offerDocument = offer as OfferEntity & { _id: Types.ObjectId };
+    const offerDocument = offer as OfferDocument;
     offer.isFavorite = await this.favoriteService.exists(userId, offerDocument._id.toString());
     return offer;
   }
