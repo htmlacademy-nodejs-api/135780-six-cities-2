@@ -1,9 +1,9 @@
 export class HttpError extends Error {
   constructor(
     public readonly statusCode: number,
-    public readonly details: string,
-    message?: string
+    message: string,
+    public readonly details: string[] = []
   ) {
-    super(message ?? details);
+    super(message);
   }
 }

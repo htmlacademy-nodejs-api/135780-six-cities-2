@@ -1,6 +1,8 @@
-import { prop, Ref } from '@typegoose/typegoose';
+﻿import { index, prop, Ref } from '@typegoose/typegoose';
 import { UserEntity } from './user.entity.js';
 
+@index({ publicationDate: -1 })
+@index({ city: 1, isPremium: 1, publicationDate: -1 })
 export class OfferEntity {
   @prop({ required: true })
   public title!: string;
@@ -14,10 +16,10 @@ export class OfferEntity {
   @prop({ required: true })
   public city!: string;
 
-  @prop()
-  public previewImage?: string;
+  @prop({ required: true })
+  public previewImage!: string;
 
-  @prop({ type: () => [String], default: [] })
+  @prop({ type: () => [String], required: true })
   public images!: string[];
 
   @prop({ required: true })
@@ -44,23 +46,11 @@ export class OfferEntity {
   @prop({ required: true })
   public price!: number;
 
-  @prop({ type: () => [String], default: [] })
+  @prop({ type: () => [String], required: true })
   public goods!: string[];
 
-  @prop({ ref: () => UserEntity })
-  public author?: Ref<UserEntity>;
-
-  @prop({ required: true })
-  public hostName!: string;
-
-  @prop({ required: true })
-  public hostEmail!: string;
-
-  @prop()
-  public hostAvatar?: string;
-
-  @prop({ required: true })
-  public hostType!: string;
+  @prop({ ref: () => UserEntity, required: true })
+  public author!: Ref<UserEntity>;
 
   @prop({ required: true })
   public latitude!: number;

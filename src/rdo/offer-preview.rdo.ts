@@ -1,5 +1,4 @@
 ﻿import { Expose, Transform } from 'class-transformer';
-import config from '../config.js';
 
 function normalizeId(value: unknown): string {
   if (typeof value === 'string') {
@@ -13,21 +12,38 @@ function normalizeId(value: unknown): string {
   return '';
 }
 
-export class UserRdo {
+export class OfferPreviewRdo {
   @Expose({ name: '_id' })
   @Transform(({ value }) => normalizeId(value))
   public id!: string;
 
   @Expose()
-  public name!: string;
+  public price!: number;
 
   @Expose()
-  public email!: string;
-
-  @Expose({ name: 'avatar' })
-  @Transform(({ value }) => value ?? config.get('DEFAULT_AVATAR_URL'))
-  public avatarUrl!: string;
+  public title!: string;
 
   @Expose()
   public type!: string;
+
+  @Expose()
+  public isFavorite!: boolean;
+
+  @Expose()
+  public publicationDate!: Date;
+
+  @Expose()
+  public city!: string;
+
+  @Expose()
+  public previewImage!: string;
+
+  @Expose()
+  public isPremium!: boolean;
+
+  @Expose()
+  public rating!: number;
+
+  @Expose()
+  public commentsCount!: number;
 }

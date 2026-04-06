@@ -1,38 +1,47 @@
-import fs from 'node:fs';
+﻿#!/usr/bin/env node
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import chalk from 'chalk';
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'node:url';
 import logger from './logger.js';
 import { fetchBaseOffers, generateOffers } from './cli/generator.js';
-import { saveOffersToTsv } from './cli/tsv.js';
 import { importTsvToDb } from './cli/importer.js';
+import { saveOffersToTsv } from './cli/tsv.js';
+
+dotenv.config({ quiet: true });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const packageJsonPath = path.join(__dirname, '../package.json');
-const version = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')).version;
+
+async function readVersion(): Promise<string> {
+  const packageJsonContent = await readFile(packageJsonPath, 'utf-8');
+  const packageJson = JSON.parse(packageJsonContent) as { version?: string };
+
+  return packageJson.version ?? '0.0.0';
+}
 
 function printHelp(): void {
   console.log(chalk.cyanBright(`
-${chalk.bold('Программа для подготовки данных для REST API сервера.')}
+CLI utility for preparing REST API data.
 
-${chalk.bold('Использование:')}
-  cli.ts --<command> [--arguments]
+Usage: cli --<command> [--arguments]
 
-${chalk.bold('Команды:')}
-  ${chalk.green('--version')}                           # выводит номер версии
-  ${chalk.green('--help')}                              # печатает этот текст
-  ${chalk.green('--generate <count> <path> <jsonUrl>')} # генерирует TSV-данные
-  ${chalk.green('--import <path> <dbUri>')}             # импортирует данные из TSV в MongoDB
+Commands:
+  --version                            # print application version
+  --help                               # print this help
+  --import <filepath>                  # import TSV data to MongoDB
+  --generate <count> <filepath> <url>  # generate random TSV data
 `));
 }
 
-function printVersion(): void {
-  console.log(chalk.yellowBright(`Версия приложения: ${version}`));
+async function printVersion(): Promise<void> {
+  const version = await readVersion();
+  console.log(version);
 }
 
-const [,, command, arg] = process.argv;
+const [, , command, ...args] = process.argv;
 
 (async () => {
   try {
@@ -40,43 +49,54 @@ const [,, command, arg] = process.argv;
       case '--help':
       case undefined:
         printHelp();
-        break;
+        return;
+
       case '--version':
-        printVersion();
-        break;
+        await printVersion();
+        return;
+
       case '--generate': {
-        if (!arg || Number.isNaN(Number(arg)) || !process.argv[4] || !process.argv[5]) {
-          throw new Error('Укажите количество, путь для сохранения и url JSON-сервера.');
+        const [countArgument, filePath, sourceUrl] = args;
+        const count = Number.parseInt(countArgument ?? '', 10);
+
+        if (!Number.isInteger(count) || count <= 0 || !filePath || !sourceUrl) {
+          throw new Error('Use: --generate <count> <filepath> <url>');
         }
 
-        const count = Number(arg);
-        const filePath = process.argv[4];
-        const url = process.argv[5];
-
-        const baseOffers = await fetchBaseOffers(url);
+        const baseOffers = await fetchBaseOffers(sourceUrl);
         const offers = generateOffers(count, baseOffers);
-
         await saveOffersToTsv(offers, filePath);
-        console.log(chalk.greenBright(`Сгенерировано ${count} предложений и сохранено в ${filePath}`));
-        break;
+
+        console.log(chalk.greenBright(`Generated ${count} offers to ${filePath}`));
+        return;
       }
+
       case '--import': {
-        const filePath = arg;
-        const dbUri = process.argv[4];
-        if (!filePath || !dbUri) {
-          throw new Error('Укажите путь к TSV-файлу и строку подключения к MongoDB.');
+        const [filePath] = args;
+        const dbConnectionUri = process.env.DB_CONNECTION_URI;
+        const dbName = process.env.DB_NAME;
+
+        if (!filePath) {
+          throw new Error('Use: --import <filepath>');
         }
 
+        if (!dbConnectionUri || !dbName) {
+          throw new Error('Set DB_CONNECTION_URI and DB_NAME in environment variables before importing');
+        }
+
+        const dbUri = `${dbConnectionUri}/${dbName}`;
         await importTsvToDb(filePath, dbUri);
-        break;
+        return;
       }
+
       default:
         printHelp();
-        throw new Error('Неизвестная команда.');
+        throw new Error(`Unknown command: ${command}`);
     }
-  } catch (err: unknown) {
-    console.error(chalk.bgRedBright((err as Error).message));
-    logger.error('Произошла ошибка');
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unexpected CLI error';
+    console.error(chalk.bgRedBright(message));
+    logger.error('CLI command failed');
     process.exitCode = 1;
   }
 })();

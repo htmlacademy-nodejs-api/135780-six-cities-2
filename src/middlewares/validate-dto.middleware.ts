@@ -40,10 +40,8 @@ export class ValidateDtoMiddleware<T extends object> implements MiddlewareInterf
     if (errors.length > 0) {
       throw new HttpError(
         StatusCodes.BAD_REQUEST,
-        JSON.stringify({
-          message: 'Validation failed',
-          errors: formatValidationErrors(errors)
-        })
+        'Validation failed',
+        formatValidationErrors(errors)
       );
     }
 

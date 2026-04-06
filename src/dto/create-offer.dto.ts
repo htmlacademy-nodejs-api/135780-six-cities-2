@@ -1,19 +1,33 @@
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
-  IsEmail,
   IsIn,
+  IsInt,
   IsISO8601,
   IsNumber,
-  IsOptional,
   IsString,
   Length,
   Max,
-  Min
+  Min,
+  ValidateNested
 } from 'class-validator';
+
+class CoordinatesDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  public latitude!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  public longitude!: number;
+}
 
 export class CreateOfferDto {
   @IsString()
@@ -31,9 +45,8 @@ export class CreateOfferDto {
   @IsIn(['Paris', 'Cologne', 'Brussels', 'Amsterdam', 'Hamburg', 'Dusseldorf'])
   public city!: string;
 
-  @IsOptional()
   @IsString()
-  public previewImage?: string;
+  public previewImage!: string;
 
   @IsArray()
   @ArrayMinSize(6)
@@ -44,27 +57,24 @@ export class CreateOfferDto {
   @IsBoolean()
   public isPremium!: boolean;
 
-  @IsBoolean()
-  public isFavorite!: boolean;
-
   @IsString()
   @IsIn(['apartment', 'house', 'room', 'hotel'])
   public type!: string;
 
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
   @Max(8)
   public bedrooms!: number;
 
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
   @Max(10)
   public maxAdults!: number;
 
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(100)
   @Max(100000)
   public price!: number;
@@ -74,25 +84,7 @@ export class CreateOfferDto {
   @IsString({ each: true })
   public goods!: string[];
 
-  @IsString()
-  public hostName!: string;
-
-  @IsEmail()
-  public hostEmail!: string;
-
-  @IsOptional()
-  @IsString()
-  public hostAvatar?: string;
-
-  @IsString()
-  @IsIn(['обычный', 'pro'])
-  public hostType!: string;
-
-  @Type(() => Number)
-  @IsNumber()
-  public latitude!: number;
-
-  @Type(() => Number)
-  @IsNumber()
-  public longitude!: number;
+  @ValidateNested()
+  @Type(() => CoordinatesDto)
+  public coordinates!: CoordinatesDto;
 }

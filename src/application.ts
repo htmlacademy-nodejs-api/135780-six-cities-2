@@ -1,5 +1,6 @@
 import express, { Express } from 'express';
 import path from 'node:path';
+import cors from 'cors';
 import { injectable } from 'inversify';
 import config from './config.js';
 import logger from './logger.js';
@@ -53,6 +54,7 @@ export class Application {
   }
 
   private registerMiddleware(): void {
+    this.app.use(cors());
     this.app.use(express.json());
     this.app.use(AppRoute.Static, express.static(path.resolve(config.get('UPLOAD_DIRECTORY'))));
   }

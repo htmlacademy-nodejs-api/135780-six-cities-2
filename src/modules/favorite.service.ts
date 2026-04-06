@@ -19,6 +19,10 @@ export class FavoriteService implements IFavoriteService {
     await FavoriteModel.deleteOne({ user: userId, offer: offerId }).exec();
   }
 
+  async removeByOfferId(offerId: string): Promise<void> {
+    await FavoriteModel.deleteMany({ offer: offerId }).exec();
+  }
+
   async exists(userId: string, offerId: string): Promise<boolean> {
     const favorite = await FavoriteModel.exists({ user: userId, offer: offerId });
     return favorite !== null;

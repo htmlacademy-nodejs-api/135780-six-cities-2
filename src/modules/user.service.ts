@@ -1,10 +1,9 @@
-import { createHash } from 'node:crypto';
 import { CreateUserDto } from '../dto/create-user.dto.js';
 import { UserEntity } from '../entities/user.entity.js';
 import { UserModel } from '../models/user.model.js';
 import { IUserService } from '../type/user-service.interface.js';
-
-const PASSWORD_SALT = 'six-cities-static-salt';
+import config from '../config.js';
+import { hashPassword } from '../utils/password.js';
 
 export class UserService implements IUserService {
   async findById(id: string): Promise<UserEntity | null> {
@@ -16,12 +15,16 @@ export class UserService implements IUserService {
   }
 
   async create(userData: CreateUserDto): Promise<UserEntity> {
-    const password = createHash('sha256')
-      .update(`${userData.password}:${PASSWORD_SALT}`)
-      .digest('hex');
+    const existedUser = await this.findByEmail(userData.email);
+    if (existedUser) {
+      throw new Error('USER_EMAIL_ALREADY_EXISTS');
+    }
+
+    const password = hashPassword(userData.password);
 
     return UserModel.create({
       ...userData,
+      avatar: userData.avatar ?? config.get('DEFAULT_AVATAR_URL'),
       password
     });
   }

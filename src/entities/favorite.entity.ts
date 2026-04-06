@@ -1,7 +1,8 @@
-import { prop, Ref } from '@typegoose/typegoose';
+import { index, prop, Ref } from '@typegoose/typegoose';
 import { UserEntity } from './user.entity.js';
 import { OfferEntity } from './offer.entity.js';
 
+@index({ user: 1, offer: 1 }, { unique: true })
 export class FavoriteEntity {
   @prop({ ref: () => UserEntity, required: true })
   public user!: Ref<UserEntity>;

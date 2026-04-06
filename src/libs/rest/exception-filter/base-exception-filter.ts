@@ -5,8 +5,8 @@ import { HttpError } from '../errors/http-error.js';
 import { ExceptionFilterInterface } from './exception-filter.interface.js';
 
 type ErrorResponse = {
-  error: string;
-  details: string;
+  message: string;
+  details?: string[];
 };
 
 export class BaseExceptionFilter implements ExceptionFilterInterface {
@@ -14,8 +14,8 @@ export class BaseExceptionFilter implements ExceptionFilterInterface {
     if (error instanceof HttpError) {
       logger.warn({ err: error }, `HTTP error: ${error.message}`);
       const response: ErrorResponse = {
-        error: 'HTTP_ERROR',
-        details: error.details
+        message: error.message,
+        details: error.details.length > 0 ? error.details : undefined
       };
       res.status(error.statusCode).json(response);
       return;
@@ -23,8 +23,7 @@ export class BaseExceptionFilter implements ExceptionFilterInterface {
 
     logger.error({ err: error }, `Server error: ${error.message}`);
     const response: ErrorResponse = {
-      error: 'INTERNAL_SERVER_ERROR',
-      details: 'Unexpected server error'
+      message: 'Unexpected server error'
     };
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(response);
   }
